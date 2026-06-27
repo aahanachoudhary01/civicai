@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar'
 import { useState } from 'react'
-import { analyzeImage, generateDescription } from '../utils/gemini'
+import { analyzeImage } from '../utils/gemini'
 import { db } from '../firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
@@ -15,7 +15,8 @@ function Report() {
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const { user } = useAuth()
+  const [errors, setErrors] = useState({})
+  const { user, loginWithGoogle } = useAuth()
 
   const toBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -34,19 +35,29 @@ function Report() {
       const base64 = await toBase64(file)
       const result = await analyzeImage(base64)
       setAiResult(result)
-      setForm(f => ({
-        ...f,
-        category: result.category,
-        description: result.description
-      }))
+      setForm(f => ({ ...f, category: result.category, description: result.description }))
     } catch (err) {
       console.error(err)
     }
     setLoading(false)
   }
 
+  const validate = () => {
+    const newErrors = {}
+    if (!form.title.trim()) newErrors.title = 'Title is required'
+    else if (form.title.trim().length < 5) newErrors.title = 'Title must be at least 5 characters'
+    if (!form.location.trim()) newErrors.location = 'Location is required'
+    if (!form.category) newErrors.category = 'Please select a category'
+    if (!form.description.trim()) newErrors.description = 'Description is required'
+    else if (form.description.trim().length < 10) newErrors.description = 'Description must be at least 10 characters'
+    return newErrors
+  }
+
   const handleSubmit = async () => {
-    if (!form.title || !form.location) return alert('Title aur Location zaroori hai!')
+    const newErrors = validate()
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return }
+    setErrors({})
+    if (!user) { loginWithGoogle(); return }
     setSubmitting(true)
     try {
       await addDoc(collection(db, 'issues'), {
@@ -79,7 +90,7 @@ function Report() {
     <div style={{ backgroundColor: '#12122a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Navbar />
       <div style={{ textAlign: 'center' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#4ade8022', border: '2px solid #4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '28px' }}>✓</div>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#4ade8022', border: '2px solid #4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '28px', color: '#4ade80' }}>✓</div>
         <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', marginBottom: '12px' }}>Issue Reported!</h2>
         <p style={{ color: '#9090bb', marginBottom: '32px' }}>Gemini AI has analyzed and logged your issue.</p>
         <button onClick={() => { setSubmitted(false); setForm({ title: '', category: '', description: '', location: '', anonymous: false }); setAiResult(null); setPreview(null) }}
@@ -89,6 +100,13 @@ function Report() {
       </div>
     </div>
   )
+
+  const inputStyle = (hasError) => ({
+    width: '100%', backgroundColor: '#1a1a38',
+    border: `1px solid ${hasError ? '#ff6b6b' : '#2a2a4a'}`,
+    borderRadius: '12px', padding: '14px 16px',
+    color: '#ffffff', fontSize: '14px', outline: 'none'
+  })
 
   return (
     <div style={{ backgroundColor: '#12122a', minHeight: '100vh' }}>
@@ -157,58 +175,65 @@ function Report() {
           </div>
         )}
 
-        {/* Form Fields */}
-        {[
-          { label: 'Issue Title', key: 'title', placeholder: 'e.g. Large pothole near main market' },
-          { label: 'Location', key: 'location', placeholder: 'e.g. MG Road, Sector 12, Jaipur' },
-        ].map((field) => (
-          <div key={field.key} style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', color: '#CCCCFF', fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>{field.label}</label>
-            <input
-              type="text"
-              placeholder={field.placeholder}
-              value={form[field.key]}
-              onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-              style={{ width: '100%', backgroundColor: '#1a1a38', border: '1px solid #2a2a4a', borderRadius: '12px', padding: '14px 16px', color: '#ffffff', fontSize: '14px', outline: 'none' }}
-            />
-          </div>
-        ))}
+        {/* Title */}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', color: '#CCCCFF', fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>Issue Title</label>
+          <input type="text" placeholder="e.g. Large pothole near main market"
+            value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+            style={inputStyle(errors.title)} />
+          {errors.title && <p style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '6px' }}>{errors.title}</p>}
+        </div>
+
+        {/* Location */}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', color: '#CCCCFF', fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>Location</label>
+          <input type="text" placeholder="e.g. MG Road, Sector 12, Jaipur"
+            value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
+            style={inputStyle(errors.location)} />
+          {errors.location && <p style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '6px' }}>{errors.location}</p>}
+        </div>
 
         {/* Category */}
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', color: '#CCCCFF', fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>Category</label>
-          <select
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-            style={{ width: '100%', backgroundColor: '#1a1a38', border: '1px solid #2a2a4a', borderRadius: '12px', padding: '14px 16px', color: '#ffffff', fontSize: '14px', outline: 'none' }}
-          >
+          <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
+            style={inputStyle(errors.category)}>
             <option value="">Select category</option>
             {categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+          {errors.category && <p style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '6px' }}>{errors.category}</p>}
         </div>
 
         {/* Description */}
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', color: '#CCCCFF', fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>Description</label>
-          <textarea
-            rows={4}
-            placeholder="Describe the issue..."
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            style={{ width: '100%', backgroundColor: '#1a1a38', border: '1px solid #2a2a4a', borderRadius: '12px', padding: '14px 16px', color: '#ffffff', fontSize: '14px', outline: 'none', resize: 'vertical' }}
-          />
+          <textarea rows={4} placeholder="Describe the issue..."
+            value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+            style={{ ...inputStyle(errors.description), resize: 'vertical' }} />
+          {errors.description && <p style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '6px' }}>{errors.description}</p>}
         </div>
 
         {/* Anonymous */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
-          <input type="checkbox" id="anon" checked={form.anonymous} onChange={(e) => setForm({ ...form, anonymous: e.target.checked })} />
+          <input type="checkbox" id="anon" checked={form.anonymous}
+            onChange={(e) => setForm({ ...form, anonymous: e.target.checked })} />
           <label htmlFor="anon" style={{ color: '#9090bb', fontSize: '14px' }}>Report anonymously</label>
         </div>
+
+        {!user && (
+          <div style={{ backgroundColor: '#1a1a38', border: '1px solid #8b8bff', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
+            <p style={{ color: '#9090bb', fontSize: '14px', marginBottom: '8px' }}>Login required to submit a report</p>
+            <button onClick={loginWithGoogle} style={{ backgroundColor: '#8b8bff', color: '#12122a', padding: '8px 24px', borderRadius: '8px', fontWeight: '700', border: 'none', cursor: 'pointer' }}>
+              Login with Google
+            </button>
+          </div>
+        )}
 
         <button onClick={handleSubmit} disabled={submitting} style={{
           width: '100%', backgroundColor: submitting ? '#5C5C99' : '#8b8bff',
           color: '#12122a', padding: '16px', borderRadius: '12px',
-          fontWeight: '800', fontSize: '16px', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer'
+          fontWeight: '800', fontSize: '16px', border: 'none',
+          cursor: submitting ? 'not-allowed' : 'pointer'
         }}>
           {submitting ? 'Submitting...' : 'Submit Report'}
         </button>

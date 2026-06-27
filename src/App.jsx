@@ -7,6 +7,7 @@ import Map from './pages/Map'
 import AIAssistant from './pages/AIAssistant'
 import Authority from './pages/Authority'
 import Leaderboard from './pages/Leaderboard'
+import NotFound from './pages/NotFound'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/assistant" element={<AIAssistant />} />
         <Route path="/authority" element={<Authority />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   )
