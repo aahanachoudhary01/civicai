@@ -7,15 +7,18 @@ function Navbar() {
   const { user, loginWithGoogle, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const links = [
-    { label: 'Home', path: '/' },
-    { label: 'Report', path: '/report' },
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Map', path: '/map' },
-    { label: 'AI Assistant', path: '/assistant' },
-    { label: 'Authority', path: '/authority' },
-    { label: 'Leaderboard', path: '/leaderboard' },
-  ]
+ const links = [
+  { label: 'Home', path: '/' },
+  { label: 'Report', path: '/report' },
+  { label: 'Dashboard', path: '/dashboard' },
+  { label: 'Trends', path: '/trends' },
+  { label: 'Map', path: '/map' },
+  { label: 'AI Assistant', path: '/assistant' },
+  { label: 'Authority', path: '/authority' },
+  { label: 'Leaderboard', path: '/leaderboard' },
+  { label: 'Voice Report', path: '/voice' },
+  { label: 'Before/After', path: '/before-after' },
+]
 
   return (
     <nav style={{

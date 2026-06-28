@@ -8,6 +8,9 @@ import AIAssistant from './pages/AIAssistant'
 import Authority from './pages/Authority'
 import Leaderboard from './pages/Leaderboard'
 import NotFound from './pages/NotFound'
+import Trends from './pages/Trends'
+import VoiceReport from './pages/VoiceReport'
+import BeforeAfter from './pages/BeforeAfter'
 
 function App() {
   return (
@@ -21,6 +24,9 @@ function App() {
         <Route path="/authority" element={<Authority />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/trends" element={<Trends />} />
+        <Route path="/voice" element={<VoiceReport />} />
+        <Route path="/before-after" element={<BeforeAfter />} />
       </Routes>
     </Router>
   )
