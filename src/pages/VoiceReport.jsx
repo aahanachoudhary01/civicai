@@ -5,6 +5,8 @@ import { db } from '../firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
 function VoiceReport() {
   const [recording, setRecording] = useState(false)
   const [transcript, setTranscript] = useState('')
@@ -52,7 +54,7 @@ function VoiceReport() {
     setLoading(true)
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=AQ.Ab8RN6ImHXQ33PacvQyMR3XIWPakFCvWxM5wVOBhtiY1UjkDqA`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -2,6 +2,8 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useState } from 'react'
 
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
 function AIAssistant() {
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Hello! I am CivicAI Assistant. Ask me about civic issues, area problems, or how to report an issue.' }
@@ -18,8 +20,8 @@ function AIAssistant() {
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=AQ.Ab8RN6ImHXQ33PacvQyMR3XIWPakFCvWxM5wVOBhtiY1UjkDqA`,
-        {
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
+  {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
