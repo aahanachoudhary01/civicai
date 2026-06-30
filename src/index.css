@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 html, body, #root {
-  background-color: #12122a;
+  background: linear-gradient(160deg, #0a0a1f 0%, #0f0f2e 30%, #1a0f3a 70%, #12122a 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
   color: #ffffff;
   font-family: 'Inter', sans-serif;
-  min-height: 100vh;
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* Desktop nav visible, mobile hidden */
 .desktop-nav {
   display: flex !important;
 }

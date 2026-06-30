@@ -9,6 +9,10 @@ import { useNavigate } from 'react-router-dom'
 const statusColor = { 'Open': '#FFB300', 'In Progress': '#8b8bff', 'Resolved': '#4ade80', 'Rejected': '#ff6b6b' }
 const severityColor = { 'Low': '#4ade80', 'Medium': '#FFB300', 'High': '#ff6b6b', 'Critical': '#ff3b3b' }
 
+const AUTHORIZED_EMAILS = [
+  'demo123@gmail.com'
+]
+
 function Authority() {
   const [issues, setIssues] = useState([])
   const [loading, setLoading] = useState(true)
@@ -38,18 +42,20 @@ function Authority() {
   const critical = issues.filter(i => i.severity === 'Critical').length
   const avgPriority = issues.length ? Math.round(issues.reduce((a, b) => a + (b.priorityScore || 0), 0) / issues.length) : 0
 
-  if (!user) return (
-    <div style={{ backgroundColor: '#12122a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Navbar />
-      <div style={{ textAlign: 'center' }}>
-        <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', marginBottom: '12px' }}>Authority Access Required</h2>
-        <p style={{ color: '#9090bb', marginBottom: '32px' }}>Login to access the authority dashboard</p>
+ if (!user || !AUTHORIZED_EMAILS.includes(user.email)) return (
+  <div style={{ backgroundColor: '#12122a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Navbar />
+    <div style={{ textAlign: 'center' }}>
+      <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', marginBottom: '12px' }}>Authority Access Restricted</h2>
+      <p style={{ color: '#9090bb', marginBottom: '32px' }}>This dashboard is only accessible to verified municipal authorities.</p>
+      {!user && (
         <button onClick={loginWithGoogle} style={{ backgroundColor: '#8b8bff', color: '#12122a', padding: '12px 32px', borderRadius: '12px', fontWeight: '700', border: 'none', cursor: 'pointer' }}>
           Login with Google
         </button>
-      </div>
+      )}
     </div>
-  )
+  </div>
+)
 
   return (
     <div style={{ backgroundColor: '#12122a', minHeight: '100vh' }}>
