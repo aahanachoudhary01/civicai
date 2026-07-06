@@ -1,94 +1,55 @@
-
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`
 
 export async function analyzeImage(base64Image) {
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    // 1. Base64 string ka mime type (png/jpeg) aur clean data nikalna
+    const mimeType = base64Image.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
+    const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+
+    // 2. Google Gemini Stable Flash Model Call
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Image
+        contents: [
+          {
+            parts: [
+              {
+                text: "Analyze this civic issue image. You must respond with ONLY a raw JSON object. Do not include markdown formatting, do not include ```json. Use this exact structure based strictly on what you see in the image: { \"category\": \"Pothole or Garbage or Waterlogging or Streetlight etc\", \"severity\": \"Low or Medium or High\", \"confidence\": 95, \"description\": \"A clear 1-sentence description of the issue visible\", \"affectedCitizens\": 30, \"estimatedDays\": 3 }"
+              },
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: cleanBase64
+                }
               }
-            },
-            {
-              text: `You are a civic issue detection AI for India. Analyze this image carefully and respond ONLY with a valid JSON object, no extra text, no markdown:
-{
-  "category": "Pothole or Water Leakage or Broken Streetlight or Garbage or Damaged Road or Open Drain or Other",
-  "severity": "Low or Medium or High or Critical",
-  "confidence": 90,
-  "description": "One clear sentence describing the civic issue in the image",
-  "affectedCitizens": 200,
-  "estimatedDays": 3
-}`
-            }
-          ]
-        }],
+            ]
+          }
+        ],
         generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 256,
+          responseMimeType: "application/json"
         }
       })
-    })
+    });
 
-    const data = await response.json()
-
-    if (data.error) {
-      console.error('Gemini API error:', data.error)
-      return getFallbackResult()
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API Failed: ${errorText}`);
     }
 
-    const text = data.candidates[0].content.parts[0].text
-    const clean = text.replace(/```json|```/g, '').trim()
-    return JSON.parse(clean)
+    const data = await response.json();
+    let content = data.candidates[0].content.parts[0].text.trim();
+    
+    // Kisi bhi tarah ka extra markdown clean karna
+    content = content.replace(/```json|```/g, "").trim();
+    
+    // Sahi dynamic JSON object return hoga jo Report.jsx ko chaiye
+    return JSON.parse(content);
 
-  } catch (err) {
-    console.error('analyzeImage error:', err)
-    return getFallbackResult()
-  }
-}
-
-export async function generateDescription(title, category, location) {
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Write a professional 2-3 sentence civic complaint description for: Title: ${title}, Category: ${category}, Location: ${location}. Be factual and clear.`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 150,
-        }
-      })
-    })
-
-    const data = await response.json()
-    if (data.error) return ''
-    return data.candidates[0].content.parts[0].text
-
-  } catch (err) {
-    console.error('generateDescription error:', err)
-    return ''
-  }
-}
-
-function getFallbackResult() {
-  return {
-    category: 'Other',
-    severity: 'Medium',
-    confidence: 70,
-    description: 'Civic issue detected. Please add more details manually.',
-    affectedCitizens: 100,
-    estimatedDays: 3
+  } catch (error) {
+    console.error("Real API Error:", error);
+    throw error; 
   }
 }

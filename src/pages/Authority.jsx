@@ -2,32 +2,54 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useEffect, useState } from 'react'
 import { db } from '../firebase'
-import { collection, onSnapshot, orderBy, query, doc, updateDoc } from 'firebase/firestore'
+import { collection, onSnapshot, orderBy, query, doc, updateDoc, getDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 const statusColor = { 'Open': '#FFB300', 'In Progress': '#8b8bff', 'Resolved': '#4ade80', 'Rejected': '#ff6b6b' }
 const severityColor = { 'Low': '#4ade80', 'Medium': '#FFB300', 'High': '#ff6b6b', 'Critical': '#ff3b3b' }
 
-const AUTHORIZED_EMAILS = [
-  'demo123@gmail.com'
-]
-
 function Authority() {
   const [issues, setIssues] = useState([])
   const [loading, setLoading] = useState(true)
+  const [checkingRole, setCheckingRole] = useState(true)
+  const [isAuthorized, setIsAuthorized] = useState(false)
   const [filter, setFilter] = useState('All')
   const { user, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
 
+  // 1. Role Authorization Check from Firestore
   useEffect(() => {
+    async function checkUserRole() {
+      if (!user) {
+        setCheckingRole(false);
+        return;
+      }
+      try {
+        const userDoc = await getDoc(doc(db, 'Users', user.email));
+        if (userDoc.exists() && userDoc.data().role === 'authority') {
+          setIsAuthorized(true);
+        } else {
+          setIsAuthorized(false);
+        }
+      } catch (err) {
+        console.error("Role Check Error:", err);
+      }
+      setCheckingRole(false);
+    }
+    checkUserRole();
+  }, [user]);
+
+  // 2. Load Issues Realtime
+  useEffect(() => {
+    if (!isAuthorized) return;
     const q = query(collection(db, 'issues'), orderBy('priorityScore', 'desc'))
     const unsub = onSnapshot(q, (snap) => {
       setIssues(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setLoading(false)
     })
     return () => unsub()
-  }, [])
+  }, [isAuthorized])
 
   const updateStatus = async (id, status) => {
     await updateDoc(doc(db, 'issues', id), { status })
@@ -42,20 +64,28 @@ function Authority() {
   const critical = issues.filter(i => i.severity === 'Critical').length
   const avgPriority = issues.length ? Math.round(issues.reduce((a, b) => a + (b.priorityScore || 0), 0) / issues.length) : 0
 
- if (!user || !AUTHORIZED_EMAILS.includes(user.email)) return (
-  <div style={{ backgroundColor: '#12122a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <Navbar />
-    <div style={{ textAlign: 'center' }}>
-      <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', marginBottom: '12px' }}>Authority Access Restricted</h2>
-      <p style={{ color: '#9090bb', marginBottom: '32px' }}>This dashboard is only accessible to verified municipal authorities.</p>
-      {!user && (
-        <button onClick={loginWithGoogle} style={{ backgroundColor: '#8b8bff', color: '#12122a', padding: '12px 32px', borderRadius: '12px', fontWeight: '700', border: 'none', cursor: 'pointer' }}>
-          Login with Google
-        </button>
-      )}
+  if (checkingRole) {
+    return (
+      <div style={{ backgroundColor: '#12122a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}>
+        Verifying Authority Credentials...
+      </div>
+    )
+  }
+
+  if (!user || !isAuthorized) return (
+    <div style={{ backgroundColor: '#12122a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Navbar />
+      <div style={{ textAlign: 'center' }}>
+        <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', marginBottom: '12px' }}>Authority Access Restricted</h2>
+        <p style={{ color: '#9090bb', marginBottom: '32px' }}>This dashboard is only accessible to verified municipal authorities.</p>
+        {!user && (
+          <button onClick={loginWithGoogle} style={{ backgroundColor: '#8b8bff', color: '#12122a', padding: '12px 32px', borderRadius: '12px', fontWeight: '700', border: 'none', cursor: 'pointer' }}>
+            Login with Google
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-)
+  )
 
   return (
     <div style={{ backgroundColor: '#12122a', minHeight: '100vh' }}>

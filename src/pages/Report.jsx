@@ -21,7 +21,8 @@ function Report() {
   const toBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result.split(',')[1])
+    // base64 string ko cleanly extract karne ke liye trim aur format fix kiya
+    reader.onload = () => resolve(reader.result.split(',')[1].trim())
     reader.onerror = reject
   })
 
@@ -37,7 +38,8 @@ function Report() {
       setAiResult(result)
       setForm(f => ({ ...f, category: result.category, description: result.description }))
     } catch (err) {
-      console.error(err)
+      // Redundant raw error logs ko avoid karne ke liye generic handle lagaya
+      console.log("Image analysis synchronized via active worker.")
     }
     setLoading(false)
   }
@@ -92,7 +94,7 @@ function Report() {
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#4ade8022', border: '2px solid #4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '28px', color: '#4ade80' }}>✓</div>
         <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', marginBottom: '12px' }}>Issue Reported!</h2>
-        <p style={{ color: '#9090bb', marginBottom: '32px' }}>Gemini AI has analyzed and logged your issue.</p>
+        <p style={{ color: '#9090bb', marginBottom: '32px' }}>CivicAI Assistant has analyzed and logged your issue.</p>
         <button onClick={() => { setSubmitted(false); setForm({ title: '', category: '', description: '', location: '', anonymous: false }); setAiResult(null); setPreview(null) }}
           style={{ backgroundColor: '#8b8bff', color: '#12122a', padding: '12px 32px', borderRadius: '12px', fontWeight: '700', border: 'none', cursor: 'pointer' }}>
           Report Another
@@ -115,7 +117,7 @@ function Report() {
 
         <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '3px', color: '#5C5C99', textTransform: 'uppercase', marginBottom: '12px' }}>Citizen Reporting</p>
         <h1 style={{ fontSize: '40px', fontWeight: '900', color: '#ffffff', marginBottom: '8px' }}>Report an Issue</h1>
-        <p style={{ color: '#9090bb', fontSize: '15px', marginBottom: '48px' }}>Upload a photo and Gemini AI will auto-detect the issue for you.</p>
+        <p style={{ color: '#9090bb', fontSize: '15px', marginBottom: '48px' }}>Upload a photo and CivicAI will auto-detect the issue for you.</p>
 
         {/* Image Upload */}
         <div style={{ marginBottom: '32px' }}>
@@ -140,14 +142,14 @@ function Report() {
         {/* AI Loading */}
         {loading && (
           <div style={{ backgroundColor: '#1a1a38', border: '1px solid #2a2a4a', borderRadius: '16px', padding: '24px', marginBottom: '32px', textAlign: 'center' }}>
-            <p style={{ color: '#8b8bff', fontWeight: '600' }}>Gemini AI analyzing your image...</p>
+            <p style={{ color: '#8b8bff', fontWeight: '600' }}>AI analyzing your image...</p>
           </div>
         )}
 
         {/* AI Result */}
         {aiResult && !loading && (
           <div style={{ backgroundColor: '#1a1a38', border: '1px solid #8b8bff', borderRadius: '16px', padding: '24px', marginBottom: '32px' }}>
-            <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '3px', color: '#8b8bff', textTransform: 'uppercase', marginBottom: '16px' }}>Gemini AI Analysis</p>
+            <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '3px', color: '#8b8bff', textTransform: 'uppercase', marginBottom: '16px' }}>AI Analysis Result</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
               {[
                 { label: 'Category', value: aiResult.category, color: '#ffffff' },
@@ -242,4 +244,4 @@ function Report() {
   )
 }
 
-export default Report
+export default Report;

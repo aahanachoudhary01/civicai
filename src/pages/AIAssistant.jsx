@@ -2,6 +2,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useState } from 'react'
 
+// Gemini Key Use Karenge Kyunki Yeh 100% Stable Hai
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 function AIAssistant() {
@@ -12,37 +13,44 @@ function AIAssistant() {
   const [loading, setLoading] = useState(false)
 
   const sendMessage = async () => {
-    if (!input.trim()) return
-    const userMsg = { role: 'user', text: input }
+    if (!input.trim() || loading) return
+    const currentInput = input;
+    const userMsg = { role: 'user', text: currentInput }
+    
     setMessages(m => [...m, userMsg])
     setInput('')
     setLoading(true)
 
     try {
-      const response = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
-  {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              ...messages.map(m => ({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.text }]
-              })),
-              { role: 'user', parts: [{ text: input }] }
-            ],
-            systemInstruction: {
-              parts: [{ text: 'You are CivicAI Assistant, an AI helper for a civic issue reporting platform in India. Help citizens with reporting issues, understanding priorities, area problems, and civic awareness. Be concise, helpful, and friendly. Answer in the same language the user uses (Hindi or English).' }]
+      // Official Google Gemini Text Generation API Call
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `You are CivicAI Assistant, an AI helper for a civic issue reporting platform in India. Help citizens with reporting issues, understanding priorities, area problems, and civic awareness. Be concise, helpful, and friendly. Answer in the same language the user uses (Hindi, Hinglish, or English). Current User Query: "${currentInput}"`
+                }
+              ]
             }
-          })
-        }
-      )
+          ]
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Gemini responds with status ${response.status}`)
+      }
+
       const data = await response.json()
       const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not process that. Please try again.'
       setMessages(m => [...m, { role: 'assistant', text: reply }])
     } catch (err) {
-      setMessages(m => [...m, { role: 'assistant', text: 'Something went wrong. Please try again.' }])
+      console.error("Chatbot Error:", err)
+      setMessages(m => [...m, { role: 'assistant', text: 'Something went wrong on the server side. Please try again.' }])
     }
     setLoading(false)
   }
