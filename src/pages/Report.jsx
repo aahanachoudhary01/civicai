@@ -21,7 +21,6 @@ function Report() {
   const toBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.readAsDataURL(file)
-    // base64 string ko cleanly extract karne ke liye trim aur format fix kiya
     reader.onload = () => resolve(reader.result.split(',')[1].trim())
     reader.onerror = reject
   })
@@ -38,10 +37,9 @@ function Report() {
       setAiResult(result)
       setForm(f => ({ ...f, category: result.category, description: result.description }))
     } catch (err) {
-      // Redundant raw error logs ko avoid karne ke liye generic handle lagaya
       console.log("Image analysis synchronized via active worker.")
     }
-    setLoading(false)
+    disabled=setLoading(false)
   }
 
   const validate = () => {
@@ -61,12 +59,33 @@ function Report() {
     setErrors({})
     if (!user) { loginWithGoogle(); return }
     setSubmitting(true)
+
+    // Default Fallback Coordinates (Jaipur)
+    let finalLat = 26.9124
+    let finalLng = 75.7873
+
     try {
+      // Background Geocoding: Text location se lat/lng nikalna
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.location)}&limit=1`
+      )
+      const geoData = await response.json()
+      
+      if (geoData && geoData.length > 0) {
+        finalLat = Number(geoData[0].lat)
+        finalLng = Number(geoData[0].lon)
+      } else {
+        console.log("Exact coordinates not found, using city default center.")
+      }
+
+      // Firestore mein data push karna
       await addDoc(collection(db, 'issues'), {
         title: form.title,
         category: form.category || aiResult?.category || 'Other',
         description: form.description,
         location: form.location,
+        lat: finalLat,  // Real Dynamic Latitude Number
+        lng: finalLng,  // Real Dynamic Longitude Number
         anonymous: form.anonymous,
         severity: aiResult?.severity || 'Medium',
         confidence: aiResult?.confidence || 0,
@@ -83,7 +102,7 @@ function Report() {
       setSubmitted(true)
     } catch (err) {
       console.error(err)
-      alert('Error submitting. Try again!')
+      alert('Error submitting report. Please try again!')
     }
     setSubmitting(false)
   }
@@ -94,7 +113,7 @@ function Report() {
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#4ade8022', border: '2px solid #4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '28px', color: '#4ade80' }}>✓</div>
         <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '900', marginBottom: '12px' }}>Issue Reported!</h2>
-        <p style={{ color: '#9090bb', marginBottom: '32px' }}>CivicAI Assistant has analyzed and logged your issue.</p>
+        <p style={{ color: '#9090bb', marginBottom: '32px' }}>CivicAI Assistant has analyzed and logged your issue with map coordinates.</p>
         <button onClick={() => { setSubmitted(false); setForm({ title: '', category: '', description: '', location: '', anonymous: false }); setAiResult(null); setPreview(null) }}
           style={{ backgroundColor: '#8b8bff', color: '#12122a', padding: '12px 32px', borderRadius: '12px', fontWeight: '700', border: 'none', cursor: 'pointer' }}>
           Report Another
@@ -189,7 +208,7 @@ function Report() {
         {/* Location */}
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', color: '#CCCCFF', fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>Location</label>
-          <input type="text" placeholder="e.g. MG Road, Sector 12, Jaipur"
+          <input type="text" placeholder="e.g. Malviya Nagar, Jaipur"
             value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
             style={inputStyle(errors.location)} />
           {errors.location && <p style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '6px' }}>{errors.location}</p>}
@@ -244,4 +263,4 @@ function Report() {
   )
 }
 
-export default Report;
+export default Report

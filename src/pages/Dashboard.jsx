@@ -2,7 +2,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useEffect, useState } from 'react'
 import { db } from '../firebase'
-import { collection, onSnapshot, orderBy, query, doc, updateDoc, increment, setDoc, getDoc } from 'firebase/firestore'
+import { collection, onSnapshot, orderBy, query, doc, updateDoc, increment, setDoc, getDoc, deleteDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 
 const statusColor = { 'Open': '#FFB300', 'In Progress': '#8b8bff', 'Resolved': '#4ade80', 'Rejected': '#ff6b6b' }
@@ -90,6 +90,19 @@ function Dashboard() {
       updateDoc(doc(db, 'issues', issueId), { votes: increment(1) }),
       setDoc(doc(db, 'userVotes', user.uid), newVoted)
     ])
+  }
+
+  // --- NEW: DELETE HANDLER FOR CREATOR ---
+  const handleDelete = async (issueId) => {
+    if (window.confirm("Are you sure you want to delete your complaint report?")) {
+      try {
+        await deleteDoc(doc(db, 'issues', issueId))
+        alert("Report deleted successfully!")
+      } catch (err) {
+        console.error("Error deleting report: ", err)
+        alert("Failed to delete the report. Please try again.")
+      }
+    }
   }
 
   const handleShare = (issue) => {
@@ -220,7 +233,21 @@ function Dashboard() {
                     Timeline
                   </button>
 
-                  <div style={{ textAlign: 'right' }}>
+                  {/* --- NEW: CONDITIONAL DELETE BUTTON FOR CREATOR --- */}
+                  {user && user.uid === issue.reportedBy && (
+                    <button onClick={() => handleDelete(issue.id)} style={{
+                      backgroundColor: '#ff6b6b1a', border: '1px solid #ff6b6b88',
+                      color: '#ff6b6b', padding: '6px 14px', borderRadius: '100px',
+                      fontSize: '13px', cursor: 'pointer', fontWeight: '600',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#ff6b6b'; e.currentTarget.style.color = '#12122a' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ff6b6b1a'; e.currentTarget.style.color = '#ff6b6b' }}>
+                      Delete
+                    </button>
+                  )}
+
+                  <div style={{ textAlign: 'right', minWidth: '50px' }}>
                     <p style={{ color: '#8b8bff', fontWeight: '800', fontSize: '16px' }}>{Math.round(issue.priorityScore || 0)}</p>
                     <p style={{ color: '#9090bb', fontSize: '11px' }}>Priority</p>
                   </div>
